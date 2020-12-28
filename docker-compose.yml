@@ -1,0 +1,27 @@
+version: '3.7'
+
+services:
+  DockerDB:
+    image: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: fLoveARTh
+      MYSQL_DATABASE: bookstore_db
+      MYSQL_USER: flovearth
+      MYSQL_PASSWORD: fLoveARTh
+
+    networks:
+      - webnet
+
+  DockerWebServer:
+    image: my-api:latest
+    depends_on:
+      - DockerDB
+    ports:
+      - "80:80"
+    restart: always
+    networks:
+      - webnet
+
+networks:
+  webnet:
+    driver: bridge

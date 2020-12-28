@@ -1,0 +1,68 @@
+AWSTemplateFormatVersion: 2010-09-09
+
+Description: |
+  Bookstore Web API Application aims to create a bookstore web service using Docker 
+  to give students the understanding to dockerization of an application. 
+  The application code is to be deployed as a RESTful web service with 
+  Flask using Dockerfile and Docker Compose on AWS Elastic Compute Cloud (EC2) Instance 
+  using AWS Cloudformation Service.  
+
+Parameters:
+  paramname:
+    Description: Enter key name
+    Type: AWS::EC2::KeyPair::KeyName
+
+Resources:
+  WebServerSecurityGroup:
+    Type: "AWS::EC2::SecurityGroup"
+    Properties:
+      GroupDescription: Enable HTTP and SSH for Web Server #required
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 80
+          ToPort: 80
+          CidrIp: 0.0.0.0/0
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+      Tags:
+        - Key: Name
+          Value: DocerizationSG
+
+  MyWebServer:
+    Type: "AWS::EC2::Instance"
+    Properties:
+      ImageId: ami-00a205cb8e06c3c4e  # Frankfurt Linux 2 AMI
+      InstanceType: t2.micro
+      KeyName: 20200824
+      SecurityGroupIds:
+        - !GetAtt WebServerSecurityGroup.GroupId
+      Tags:
+        - Key: Name
+          Value: !Sub My Web Server of ${AWS::StackName} Stack
+      UserData:
+        Fn::Base64:
+          !Sub |
+            #! /bin/bash
+            yum update -y
+            FOLDER="https://raw.githubusercontent.com/flovearth/66_Docerization_BookstoreAPI_Python_Flask_MySQL/main/"
+            wget "$FOLDER"Dockerfile -P /home/ec2-user
+            wget "$FOLDER"bookstore-api.py -P /home/ec2-user
+            wget "$FOLDER"docker-compose.yml -P /home/ec2-user
+            wget "$FOLDER"requirements.txt -P /home/ec2-user
+            amazon-linux-extras install docker
+            systemctl start docker
+            systemctl enable docker
+            usermod -a -G docker ec2-user
+            sudo curl -L "https://github.com/docker/compose/releases/download/1.27.4/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            chmod +x /usr/local/bin/docker-compose           
+            cd /home/ec2-user
+            docker build -t "my-api:latest" .
+            docker-compose up -d
+Outputs:
+  WebsiteURL:
+    Description: BookStore Web API URL
+    Value: !Sub 
+      - http://${PublicAddress}
+      - PublicAddress: !GetAtt MyWebServer.PublicDnsName
